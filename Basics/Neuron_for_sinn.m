@@ -23,10 +23,10 @@ classdef Neuron_for_sinn
             obj.d_cache                 =0;
       end
       
-      function [obj] = feedforward(x,exp,obj)
-            assert(len(x)==self.input_num,"Input number should be equal to input_num %d",self.input_num);
+      function [obj] = feedforward(obj,x,exp)
+            assert(length(x)==obj.input_num,"Input number should be equal to input_num %d",obj.input_num);
             obj.a_cache =   dot(obj.w,x) + obj.b; %Linear Layer
-            obj.y_cache =   sigmoid(a);
+            obj.y_cache =   sigmoid(obj.a_cache);
             obj.d_cache =   exp;
             temp = 0;
             for i = 1:obj.input_num
