@@ -32,18 +32,15 @@ what = results-compare;
 
 
 subplot(3,1,1);
-title("Real");
 plot(compare)
 
 subplot(3,1,2); 
-title("Estimated");
 plot(results)
 
 subplot(3,1,3); 
 plot(results)
 hold on
 plot(compare)
-hold off
 
 
 
