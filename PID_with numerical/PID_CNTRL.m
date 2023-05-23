@@ -11,13 +11,13 @@ classdef PID_CNTRL
         function self = PID_CNTRL(strt_val,sr)
             self.Intg_calc = Intg(strt_val,sr);
             self.Diff_calc = Diff(strt_val,sr);
-            self.Kp = 0;  self.Kd = 0; self.Ki = 0;
+            self.Kp = 0.9;  self.Kd = 0.4; self.Ki = 0.2;
         end
 
-        function result = proc(self,new_e)
-            intg_res = Intg.intg(new_e);
-            dif_res = Diff.diff(new_e);
-            res = self.Kd*dif_res + self.Ki*intg_res + self.Kp*new_val;
+        function [self,result] = proc(self,new_e)
+            [self.Intg_calc, intg_res] = self.Intg_calc.intg(new_e);
+            [self.Diff_calc, dif_res] = self.Diff_calc.diff(new_e);
+            res = self.Kd*dif_res + self.Ki*intg_res + self.Kp*new_e;
             result = res;
         end
     end

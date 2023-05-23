@@ -1,27 +1,36 @@
 clear;clc;
 
-sr = 1;
-endtime = 50;
-
+% Simulation parameters defined
+sr = 1; % Sample Rate
+endtime = 180; % Simulation End time
 time_array = 1:sr:endtime;
-my_intg = Intg(0,sr);
-my_diff = Diff(0,sr);
+
+% Pid and Plant Instentation
 my_PID = PID_CNTRL(0,sr);
+my_Plant = RandomPlant(0);
 
-% Initialize output array
-% y = increasingStepFunction(time_array,sr,endtime);
+% Reference Signal Generation
+ref = rndm_input_gen(time_array,sr,endtime,40);
 
-res_int = zeros(size(time_array));
-res_dif = zeros(size(time_array));
+% Arrays to store output values of the system
+sys_u = zeros(size(time_array));
+sys_y = zeros(size(time_array));
+sys_e = zeros(size(time_array));
 
-squared_values = time_array.^2;
-y = squared_values;
-
+new_e = 0;
 for t = 1:sr:endtime
-   
-    [my_intg,res_int(t)] = my_intg.intg(y(t));
-    [my_diff,res_dif(t)] = my_diff.diff(y(t));
+        %System process 
+        [my_PID,u] = my_PID.proc(new_e);
+        [my_Plant,res] = my_Plant.proc(u);
+
+        new_e = ref(t) - res;
+        
+        %Store the values
+        sys_u(t) = u;
+        sys_y(t) = res; 
+        sys_e(t) = new_e; 
 end
+
 
 
 
