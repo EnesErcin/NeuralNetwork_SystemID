@@ -19,13 +19,13 @@ def myloop(method):
 
 
 class neuron_layer:
-    def __init__(self,input_size,layer_width):
+    def __init__(self,input_size,layer_width,lr):
 
         ####### |  | |  |   |  |    |  | |  |    |  |    |  |  |  |     |  | #####
         ####### |  | |  |   |  |    |  | |  |    |  |    |  |  |  |     |  | #####
         ####### |x1|*|w1| + |b1| ,  |x1|*|w2|  + |b2| ,  |x1| *|w3| +   |b3| #####
         ####### |  | |  |   |  |    |  | |  |    |  |    |  |  |  |     |  | #####
-
+        self.lr = lr
         self.layer_width = layer_width
         self.input_size = input_size
         self.w = np.random.rand(layer_width,input_size)
@@ -55,6 +55,15 @@ class neuron_layer:
             for i in range (0,self.layer_width):
                 self.sig[i] = (sigmoid(a[i]))
         return self.sig
+    
+    def backprop(self,dj_da):
+        da = -self.sig*(1-self.sig)
+        de_dw = np.matmul(self.x,dj_da)
+        print(np.shape(de_dw))
+        
+        self.w = self.w + self.lr*de_dw.T*da
+        da_dw = np.matmul(dj_da,self.w)
+        return da_dw*da
 
     def clear(self):
         self.sig = np.zeros([self.layer_width,1])
@@ -62,14 +71,16 @@ class neuron_layer:
 
     def param_check(self,fnc,a):
         assert type(fnc) == str
+        print(np.shape(a) )
         assert np.shape(a) == (self.layer_width,1) 
             
 class output_layer(neuron_layer):
-    def __init__(self,input_size,output_num,coss_fnc):
-        neuron_layer.__init__(self,input_size,output_num)
+    def __init__(self,input_size,output_num,coss_fnc,learning_rate):
+        neuron_layer.__init__(self,input_size,output_num,learning_rate)
         self.coss_fnc = coss_fnc
         ## Store error
         self.j = np.zeros([self.layer_width,1])
+        
 
     def forward(self,x):
         self.clear()
@@ -90,10 +101,23 @@ class output_layer(neuron_layer):
         if self.coss_fnc == "mse":
             return (exp - a)**2
 
-
     def non_linear(self):
         # Output layer does not have activatison function in this case
         assert False 
+
+    def backprop(self,*args):
+        dj = -2*self.j
+        print("Chekk>>>>> \n")
+        print("Size of dj should be (3,1)", np.shape(dj))
+        dw = self.x
+        print(np.shape(dj),np.shape(self.w))
+        da_dj = np.matmul(dj.T,self.w)
+        de_dw = np.matmul(dj,dw.T)
+        print("Check me out ",np.shape(de_dw))
+        print("Size of dj should be (3,1)", np.shape(dj))
+        self.w = self.w + self.lr*de_dw
+    
+        return da_dj
 
     def clear(self):
         self.j = np.zeros([self.layer_width,1])
@@ -104,23 +128,21 @@ class output_layer(neuron_layer):
         assert np.shape(a) == (self.layer_width,1) 
 
 
-
-
 class neuron_layers:
-    def __init__(self,hidden_layers):
-        self.hidden_layers = hidden_layers
+    def __init__(self,layer_width,learning_rate):
+        self.layer_width = layer_width
         self.param_check()
-        self.hidden_size = len(hidden_layers) -1 # Include input at first || Output size at last
+        self.hidden_size = len(layer_width) -1 # Include input at first || Output size at last
         
 
         self.layers = []
         ## Generate  >> input and  hidden layers
         for i in range (0,self.hidden_size-1):
-            my_neuron = neuron_layer(hidden_layers[i],hidden_layers[i+1])
+            my_neuron = neuron_layer(layer_width[i],layer_width[i+1],learning_rate)
             self.layers.append(my_neuron)
         
         ## Generate >> output layer
-        my_outlayer = output_layer(hidden_layers[-2],hidden_layers[-1],"mse")
+        my_outlayer = output_layer(layer_width[-2],layer_width[-1],"mse",learning_rate)
         self.layers.append(my_outlayer)
 
 
@@ -147,6 +169,15 @@ class neuron_layers:
 
         return [j,a]
 
+
+    def back_prop(self):
+        cnt = self.hidden_size -1 
+        da_dw = None
+        for a in range (0,self.hidden_size):
+            cnt = self.hidden_size-a-1
+            da_dw = self.layers[cnt].backprop(da_dw)
+        pass
+
     def param_check(self):
         ## Check the parameters
-        assert type(self.hidden_layers) == list # Should be array
+        assert type(self.layer_width) == list # Should be array
