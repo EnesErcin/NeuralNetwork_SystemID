@@ -50,10 +50,11 @@ class neuron_layers:
     
     def back_prop(self):
         cnt = self.hidden_size -1 
-        da_dw = None
-        for a in range (0,self.hidden_size):
-            cnt = self.hidden_size-a-1
-            da_dw = self.layers[cnt].backprop(da_dw)
+        da_dc = None
+        for a in range (0,self.hidden_size+1):
+            cnt = self.hidden_size-a
+            da_dc,dJ_dw = self.layers[cnt].backprop(da_dc)
+            print("@ {} da_dc {}".format(cnt,dJ_dw))
         pass
 
 
@@ -110,14 +111,24 @@ class neuron_layer:
         self.sig = np.zeros([self.layer_width,1])
         self.x = np.zeros([self.input_size,1])
 
-    def backprop(self,dj_da):
-        da = -self.sig*(1-self.sig)
-        de_dw = np.matmul(self.x,dj_da)
-        print(np.shape(de_dw))
+    def backprop(self,dJ_dc):
+        ####
+        ####  w*c_t + b = a_(t+1)
+        ####  c_(t+1) = σ(a_(t+1))
+        ####
+        ####  da_dc(t)= w
+        ####  dc(t+1)_da = -c(1-c)
+
         
-        self.w = self.w + self.lr*de_dw.T*da
-        da_dw = np.matmul(dj_da,self.w)
-        return da_dw*da
+        da_1 = -self.sig*(1-self.sig)
+        
+        dw = dJ_dc*da_1
+        dJ_dw = dw*self.x
+        self.w = self.w + self.lr*dJ_dw
+
+        print("dw_2 = \t{} d_a1 = \t{} dJ_dc = \t{}".format(self.x, self.sig, dJ_dc))
+
+        return dw, dJ_dw
     
 class output_layer(neuron_layer):
     def __init__(self,input_size,output_num,coss_fnc,learning_rate):
@@ -136,16 +147,18 @@ class output_layer(neuron_layer):
     
     
     def backprop(self,*args):
+
+        ## J = (r-y)**2
+        ## dJ/dy = -2*J
+
         dj = -2*self.j
-        print("Chekk>>>>> \n")
-        print("Size of dj should be (3,1)", np.shape(dj))
         dw = self.x
-        print(np.shape(dj),np.shape(self.w))
-        da_dj = np.matmul(dj.T,self.w)
-        de_dw = np.matmul(dj,dw.T)
-        print("Check me out ",np.shape(de_dw))
-        print("Size of dj should be (3,1)", np.shape(dj))
-        self.w = self.w + self.lr*de_dw
+        dj_dw = dj*dw
+        
+        dj_dc = dj*self.w
+        
+        self.w = self.w - self.lr*dj_dw
+        return dj_dc, dj_dc
     
     def extract_output(self,x,exp):
         a = self.forward(x)
