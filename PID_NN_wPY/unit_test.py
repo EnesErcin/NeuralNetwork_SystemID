@@ -58,16 +58,13 @@ for i in range(0,layer_cnt):
 
     print("\n \n")
 
-
 """
 
-my_a = np.random.randn(1,3)
-my_x2 =np.ones((3,4))
-my_res = np.matmul(my_a,my_x2)
+my_a = np.random.randn(3,1)
+my_x2 =np.ones((2,1))
+print("Shapes a {} \t x2 \t {}".format(np.shape(my_a),np.shape(my_x2)))
+my_res = (my_x2 @ my_a.T)
 print(my_res)
 print(np.shape(my_res))
 
 
-print("\n\n")
-print(my_a)
-print(my_x2)

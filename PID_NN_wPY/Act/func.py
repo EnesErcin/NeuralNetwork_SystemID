@@ -8,6 +8,7 @@ class neuron_layers:
         
 
         self.layers = []
+        
         ## Generate  >> input and  hidden layers
         for i in range (0,self.hidden_size):
             my_neuron = neuron_layer(layer_width[i],layer_width[i+1],learning_rate)
@@ -16,6 +17,7 @@ class neuron_layers:
         ## Generate >> output layer
         my_outlayer = output_layer(layer_width[-2],layer_width[-1],"mse",learning_rate)
         self.layers.append(my_outlayer)
+        print("The Mosttt " , len(self.layers))
 
     def param_check(self):
         ## Check the parameters
@@ -83,8 +85,9 @@ class neuron_layer:
     def forward(self,x):
         self.clear()        
         print("Forward Calculations || W.x + b || == a \n")
-        print("W -> {}, x -> {}, b ->{}".format(self.w,x,self.b))
+        print("W -> \n {}, x -> \n {}, b -> \n {}\n----".format(self.w,x,self.b))
         ##  a = w*x + b
+        self.param_check(x = x)
         self.x = x
         a = np.dot(self.w,x)
         a = a + self.b
@@ -93,7 +96,7 @@ class neuron_layer:
     
     def non_linear(self,fnc,a):
         ## σ(a) = y
-        self.param_check(fnc,a)
+        self.param_check(fnc = fnc,a = a)
 
         if fnc == "sig":
             sig = 1.0/(1.0 + np.exp(-a))
@@ -103,10 +106,17 @@ class neuron_layer:
         print("σ(a) -> {}".format(self.sig))
         return sig
 
-    def param_check(self,fnc,a):
-        assert type(fnc) == str
-        assert np.shape(a) == (self.layer_width,1) 
-    
+    def param_check(self,**kwargs):
+
+        for args in kwargs:
+            if args == "fnc":
+                assert type(kwargs[args]) == str
+            if args == "a":
+                assert np.shape(kwargs[args]) == (self.layer_width,1)
+            if args == "x":
+                assert type(kwargs[args]) == np.ndarray
+                assert np.shape(kwargs[args]) == np.shape(self.x)
+     
     def clear(self):
         self.sig = np.zeros([self.layer_width,1])
         self.x = np.zeros([self.input_size,1])
