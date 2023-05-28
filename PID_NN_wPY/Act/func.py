@@ -23,40 +23,34 @@ class neuron_layers:
         ## Check the parameters
         assert type(self.layer_width) == list # Should be array
 
-    def calc_output(self,x,exp):
-        temp = self.forward(x)
+    def calc_output(self,x,ref):
+        exp = self.forward(x)
+        j = self.layers[-1].extract_output(exp,ref)
 
-        print("\n \n |||| In neuron {}".format(self.hidden_size))
-        [j,a] = self.layers[-1].extract_output(temp[-1],exp)
-        a = np.reshape(a,(np.size(a),1))
-        temp.append(a)
-
-        return [j,a]
+        return [j,exp,x]
+    
     
     def forward(self,x):
-        temp = []
-        temp.append(x)
+        temp = x
         
         for i in range (0,self.hidden_size):
             print("\n \n |||| In neuron {}".format(i))
-            a = self.layers[i].forward(temp[i])
+            a = self.layers[i].forward(temp)
             y = self.layers[i].non_linear("sig",a)
-            y = np.reshape(y,(np.size(y),1))
-            temp.append(y)
-            print("-------------------------\n")
+            temp = y
 
-        a = self.layers[-1].forward(temp[-1])
-        print("-------------------------\n")
+        print("\n \n |||| In neuron {}".format(self.hidden_size))
+        a = self.layers[-1].forward(temp)
 
-        return temp
+        return a
     
     def back_prop(self):
         cnt = self.hidden_size -1 
         da_dc = None
         for a in range (0,self.hidden_size+1):
             cnt = self.hidden_size-a
-            da_dc,dJ_dw = self.layers[cnt].backprop(da_dc)
-            print("@ {} da_dc {}".format(cnt,dJ_dw))
+            da_dc = self.layers[cnt].backprop(da_dc)
+            print(" Backproped @ Neuron: {} ".format(cnt))
         pass
 
 
@@ -71,7 +65,7 @@ class neuron_layer:
         self.lr = lr
         self.layer_width = layer_width
         self.input_size = input_size
-        self.w = np.ones((layer_width,input_size))
+        self.w = np.random.rand(layer_width,input_size)
         self.b = np.random.rand(layer_width,1)
 
         ########################################
@@ -82,8 +76,7 @@ class neuron_layer:
         ## Store x
         self.x = np.zeros([input_size,1])
 
-    def forward(self,x):
-        self.clear()        
+    def forward(self,x):       
         print("Forward Calculations || W.x + b || == a \n")
         print("W -> \n {}, x -> \n {}, b -> \n {}\n----".format(self.w,x,self.b))
         ##  a = w*x + b
@@ -116,12 +109,14 @@ class neuron_layer:
             if args == "x":
                 assert type(kwargs[args]) == np.ndarray
                 assert np.shape(kwargs[args]) == np.shape(self.x)
+            if args == "sig":
+                assert np.shape(kwargs[args]) == (self.layer_width,1)
      
     def clear(self):
         self.sig = np.zeros([self.layer_width,1])
         self.x = np.zeros([self.input_size,1])
 
-    def backprop(self,dJ_dc):
+    def backprop(self,dJ_da):
         ####
         ####  w*c_t + b = a_(t+1)
         ####  c_(t+1) = σ(a_(t+1))
@@ -129,19 +124,25 @@ class neuron_layer:
         ####  da_dc(t)= w
         ####  dc(t+1)_da = -c(1-c)
 
-        
-        da_1 = -self.sig*(1-self.sig)
-        
-        dw = dJ_dc*da_1
-        dJ_dw = dw*self.x
+        self.param_check(sig = self.sig)
+
+        dJ_da = dJ_da * self.sig.T
+
+        dJ_dw = dJ_da.T @ self.x.T
+
+        da_dc = self.w
+
+        dJ_dc = dJ_da @ da_dc
+
+        dJ_da = dJ_dc
+
+        #dJ_dw = np.clip(dJ_dw,-50,50)
         self.w = self.w + self.lr*dJ_dw
 
-        print("dw_2 = \t{} d_a1 = \t{} dJ_dc = \t{}".format(self.x, self.sig, dJ_dc))
-
-        return dw, dJ_dw
+        return dJ_da
     
 class output_layer(neuron_layer):
-    def __init__(self,input_size,output_num,coss_fnc,learning_rate):
+    def __init__(self,input_size,output_num,coss_fnc="mse",learning_rate=0.0005):
         neuron_layer.__init__(self,input_size,output_num,learning_rate)
         self.coss_fnc = coss_fnc
         ## Store error
@@ -161,24 +162,29 @@ class output_layer(neuron_layer):
         ## J = (r-y)**2
         ## dJ/dy = -2*J
 
-        dj = -2*self.j
-        dw = self.x
-        dj_dw = dj*dw
-        
-        dj_dc = dj*self.w
-        
-        self.w = self.w - self.lr*dj_dw
-        return dj_dc, dj_dc
-    
-    def extract_output(self,x,exp):
-        a = self.forward(x)
-        self.j = self.calc_error(exp,a)
-        ## Return error and outputs
-        return [self.j,a]
+        dJ_da = -2*self.j
+        dJ_da = dJ_da.T
 
-    def calc_error(self,exp,a):
+        dJ_dw = dJ_da.T @ self.x.T
+
+        da_dc = self.w
+        
+        dJ_dc = dJ_da @ da_dc
+        dJ_da = dJ_dc
+
+        self.w = self.w + self.lr*dJ_dw
+
+        return dJ_da
+    
+    def extract_output(self,exp,ref):
+        
+        self.j = self.calc_error(exp,ref)
+        ## Return error and outputs
+        return self.j
+
+    def calc_error(self,exp,ref):
         if self.coss_fnc == "mse":
-            return (exp - a)**2
+            return (ref - exp)**2
 
 def sigmoid(x):
     return 1.0/(1.0 + np.exp(-x))
