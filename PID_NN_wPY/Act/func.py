@@ -5,8 +5,6 @@ class neuron_layers:
         self.layer_width = layer_width
         self.param_check()
         self.hidden_size = len(layer_width) -2 # Include input at first || Output size at last
-        
-
         self.layers = []
         
         ## Generate  >> input and  hidden layers
@@ -17,29 +15,31 @@ class neuron_layers:
         ## Generate >> output layer
         my_outlayer = output_layer(layer_width[-2],layer_width[-1],"mse",learning_rate)
         self.layers.append(my_outlayer)
-        print("The Mosttt " , len(self.layers))
 
-    def param_check(self):
+    def param_check(self,**kwargs):
         ## Check the parameters
         assert type(self.layer_width) == list # Should be array
 
+        for args in kwargs:
+            if args == "ref":
+                assert(np.shape(kwargs[args]) == (self.layers[-1].layer_width,1))
+
     def calc_output(self,x,ref):
         exp = self.forward(x)
-        j = self.layers[-1].extract_output(exp,ref)
-
+        self.param_check(ref = ref)
+        j,self.total_error = self.layers[-1].extract_output(exp,ref)
+        
         return [j,exp,x]
     
     
     def forward(self,x):
         temp = x
-        
+        print("Input to the neuron **** x --> {}".format(x))
         for i in range (0,self.hidden_size):
-            print("\n \n |||| In neuron {}".format(i))
             a = self.layers[i].forward(temp)
-            y = self.layers[i].non_linear("sig",a)
+            y = self.layers[i].non_linear("relu",a)
             temp = y
 
-        print("\n \n |||| In neuron {}".format(self.hidden_size))
         a = self.layers[-1].forward(temp)
 
         return a
@@ -51,12 +51,11 @@ class neuron_layers:
             cnt = self.hidden_size-a
             da_dc = self.layers[cnt].backprop(da_dc)
             print(" Backproped @ Neuron: {} ".format(cnt))
-        pass
 
 
 
 class neuron_layer:
-    def __init__(self,input_size,layer_width,lr=10**-5):
+    def __init__(self,input_size,layer_width,lr):
 
         ####### |  | |  |   |  |    |  | |  |    |  |    |  |  |  |     |  | #####
         ####### |  | |  |   |  |    |  | |  |    |  |    |  |  |  |     |  | #####
@@ -65,8 +64,9 @@ class neuron_layer:
         self.lr = lr
         self.layer_width = layer_width
         self.input_size = input_size
-        self.w = np.random.rand(layer_width,input_size)
-        self.b = np.random.rand(layer_width,1)
+        self.w = np.random.rand(layer_width,input_size)*0.5
+        self.b = np.random.rand(layer_width,1)*0.5
+        self.fnc = "relu"
 
         ########################################
         ###### STORED VALUES FOR BACKPROP !! ###
@@ -77,14 +77,13 @@ class neuron_layer:
         self.x = np.zeros([input_size,1])
 
     def forward(self,x):       
-        print("Forward Calculations || W.x + b || == a \n")
-        print("W -> \n {}, x -> \n {}, b -> \n {}\n----".format(self.w,x,self.b))
+        #print("Forward Calculations || W.x + b || == a \n")
+        #print("W -> \n {}, x -> \n {}, b -> \n {}\n----".format(self.w,x,self.b))
         ##  a = w*x + b
         self.param_check(x = x)
         self.x = x
         a = np.dot(self.w,x)
         a = a + self.b
-        print("a -> {}".format(a))
         return a
     
     def non_linear(self,fnc,a):
@@ -93,10 +92,16 @@ class neuron_layer:
 
         if fnc == "sig":
             sig = 1.0/(1.0 + np.exp(-a))
+        elif fnc == "relu":
+            sig = relu(a)
+        else:
+            assert False
+
         self.sig = sig
-        print("Nonlinear ||σ(a) = y|| == a \n")
-        print("a -> {} ".format(a))
-        print("σ(a) -> {}".format(self.sig))
+        
+        #print("Nonlinear ||σ(a) = y|| == a \n")
+        #print("a -> {} ".format(a))
+        #print("σ(a) -> {}".format(self.sig))
         return sig
 
     def param_check(self,**kwargs):
@@ -126,18 +131,29 @@ class neuron_layer:
 
         self.param_check(sig = self.sig)
 
-        dJ_da = dJ_da * self.sig.T
+        if self.fnc == "sig":
+            activation_derivative = (self.sig*(1-self.sig))
+        elif self.fnc == "relu":
+            activation_derivative = drelu(self.sig)
+
+
+
+        dJ_da = dJ_da * (activation_derivative).T
 
         dJ_dw = dJ_da.T @ self.x.T
+
+        dJ_db = dJ_da.T 
 
         da_dc = self.w
 
         dJ_dc = dJ_da @ da_dc
 
         dJ_da = dJ_dc
-
-        #dJ_dw = np.clip(dJ_dw,-50,50)
-        self.w = self.w + self.lr*dJ_dw
+        
+        dJ_dw = np.clip(dJ_dw,-10,10)
+        self.w = self.w - self.lr*dJ_dw
+        self.b = self.b - self.lr*dJ_db
+        
 
         return dJ_da
     
@@ -147,7 +163,9 @@ class output_layer(neuron_layer):
         self.coss_fnc = coss_fnc
         ## Store error
         self.j = np.zeros([self.layer_width,1])
-    
+        self.total_error = 0
+        self.error = np.zeros([self.layer_width,1])
+
     def non_linear(self,*args):
         # Output layer does not have activatison function in this case
         pass 
@@ -156,15 +174,22 @@ class output_layer(neuron_layer):
         self.j = np.zeros([self.layer_width,1])
         self.x = np.zeros([self.input_size,1])
     
+    def forward(self, x):
+        a =super().forward(x)
+        print("Output x \t {}".format(a))
+
+        return a
     
     def backprop(self,*args):
 
         ## J = (r-y)**2
-        ## dJ/dy = -2*J
 
         dJ_da = -2*self.j
+        ## dJ/dy = -2*J
+        
+        self.b = self.b - self.lr*dJ_da
         dJ_da = dJ_da.T
-
+        
         dJ_dw = dJ_da.T @ self.x.T
 
         da_dc = self.w
@@ -172,19 +197,29 @@ class output_layer(neuron_layer):
         dJ_dc = dJ_da @ da_dc
         dJ_da = dJ_dc
 
-        self.w = self.w + self.lr*dJ_dw
+
+        self.w = self.w - self.lr*dJ_dw 
 
         return dJ_da
     
     def extract_output(self,exp,ref):
         
-        self.j = self.calc_error(exp,ref)
+        self.error = self.calc_error(exp,ref)
+        self.j = self.error
+        self.total_error = np.sum(self.j)
+
         ## Return error and outputs
-        return self.j
+        return self.j,self.total_error
 
     def calc_error(self,exp,ref):
         if self.coss_fnc == "mse":
-            return (ref - exp)**2
+            return (ref - exp)
 
 def sigmoid(x):
     return 1.0/(1.0 + np.exp(-x))
+
+def relu(x):
+    return x * (x>0)
+
+def drelu(x):
+    return np.where(x <= 0, 0, 1)
