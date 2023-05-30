@@ -183,9 +183,9 @@ class output_layer(neuron_layer):
     def backprop(self,*args):
 
         ## J = (r-y)**2
-
-        dJ_da = -2*self.j
         ## dJ/dy = -2*J
+        dJ_da = -2*self.j
+        
         
         self.b = self.b - self.lr*dJ_da
         dJ_da = dJ_da.T
