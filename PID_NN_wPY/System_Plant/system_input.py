@@ -6,9 +6,9 @@ def _input_gen(t,sr,end_t,strt_val):
     acc = strt_val
     cnt = 0
 
-    y = np.zeros(((np.size(t))))
+    y = np.zeros(((np.size(t)+1)))
 
-    for i in range (0,end_t):
+    for i in range (0,end_t+1):
         y[i] = acc 
 
         if cnt >=step_dur:
@@ -16,3 +16,5 @@ def _input_gen(t,sr,end_t,strt_val):
             acc = acc + step_inc
 
         cnt = cnt +1
+        
+    return y
