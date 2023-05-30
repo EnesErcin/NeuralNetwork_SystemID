@@ -2,7 +2,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-def plot_ss_signals(time_array,store_in_u,stor_out,store_ref,stor_err):
+def plot_ss_signals(is_linear,time_array,store_in_u,stor_out,store_ref,stor_err):
     fig_2, (ax0, ax1)= plt.subplots(2, 1, figsize=(8, 10))
 
     # Plot data on each subplot
@@ -17,5 +17,17 @@ def plot_ss_signals(time_array,store_in_u,stor_out,store_ref,stor_err):
     ax1.axhline(y = (np.mean(np.abs(np.array(stor_err)[:,0]))),label ="Abs average error",color='g')
     ax1.set_title('Error')
     ax1.legend()
+
+    # Set the desired directory path
+    directory_path = 'Sim_pics/'
+
+    if is_linear :
+        image_str = 'Sim_{}_output.png'.format("linear")
+    else:
+        image_str = 'Sim_{}_output.png'.format("non_linear")
+
+
+    # Save the plot in the specified directory
+    plt.savefig(directory_path + image_str)
 
     plt.show()

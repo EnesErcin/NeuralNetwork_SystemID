@@ -4,9 +4,13 @@ from System_Plant.system_input import _input_gen
 from Graph_sim import plot_ss_signals
 import numpy as np
 
+
 #############################
 ### Simulation paramaters ###
 #############################
+
+# Linear system ?
+is_linear = System_Plant.is_linear
 
 # Define a simulation time array
 sim_s = 0
@@ -18,7 +22,7 @@ assert(sim_end>sim_s)
 sim_t = np.arange(sim_s,sim_end,sr)
 
 # Generate reference signal
-ref = _input_gen(sim_t,sr,sim_end,sim_s)
+ref = _input_gen(is_linear,sim_t,sr,sim_end,sim_s)
 
 # Make update_k True to enable Deep NN optimizations
 update_k = False
@@ -59,6 +63,4 @@ for t in range (sim_s,sim_end):
     store_ref[t] = ref[t+1]
     store_in_u[t]=u_signal
 
-
-
-plot_ss_signals(sim_t,store_in_u,stor_out,store_ref,stor_err)
+plot_ss_signals(is_linear,sim_t,store_in_u,stor_out,store_ref,stor_err)
