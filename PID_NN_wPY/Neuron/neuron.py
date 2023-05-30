@@ -1,11 +1,13 @@
 import numpy as np
 
 class neuron_layers:
-    def __init__(self,layer_width,learning_rate):
+    def __init__(self,layer_width,learning_rate,update_method = "err"):
         self.layer_width = layer_width
         self.param_check()
         self.hidden_size = len(layer_width) -2 # Include input at first || Output size at last
         self.layers = []
+        assert(update_method == "ref" or update_method == "err")
+        self.updt_method = update_method
         
         ## Generate  >> input and  hidden layers
         for i in range (0,self.hidden_size):
@@ -13,7 +15,7 @@ class neuron_layers:
             self.layers.append(my_neuron)
         
         ## Generate >> output layer
-        my_outlayer = output_layer(layer_width[-2],layer_width[-1],"mse",learning_rate)
+        my_outlayer = output_layer(layer_width[-2],layer_width[-1],update_method,"mse",learning_rate)
         self.layers.append(my_outlayer)
 
     def param_check(self,**kwargs):
@@ -34,7 +36,6 @@ class neuron_layers:
     
     def forward(self,x):
         temp = x
-        print("Input to the neuron **** x --> {}".format(x))
         for i in range (0,self.hidden_size):
             a = self.layers[i].forward(temp)
             y = self.layers[i].non_linear("relu",a)
@@ -44,15 +45,21 @@ class neuron_layers:
 
         return a
     
-    def back_prop(self):
+    def back_prop(self,dJ_da=None):
         cnt = self.hidden_size -1 
         da_dc = None
         for a in range (0,self.hidden_size+1):
+
             cnt = self.hidden_size-a
-            da_dc = self.layers[cnt].backprop(da_dc)
-            print(" Backproped @ Neuron: {} ".format(cnt))
 
+            if cnt == self.hidden_size:
+                if self.updt_method == "err":
+                    da_dc = self.layers[cnt].backprop(da_dc)
+                else:
+                    da_dc = self.layers[cnt].backprop(da_dc,dJ_da_val = dJ_da)
 
+            else:
+                da_dc = self.layers[cnt].backprop(da_dc)
 
 class neuron_layer:
     def __init__(self,input_size,layer_width,lr):
@@ -121,7 +128,7 @@ class neuron_layer:
         self.sig = np.zeros([self.layer_width,1])
         self.x = np.zeros([self.input_size,1])
 
-    def backprop(self,dJ_da):
+    def backprop(self,dJ_da,**kwargs):
         ####
         ####  w*c_t + b = a_(t+1)
         ####  c_(t+1) = σ(a_(t+1))
@@ -135,7 +142,6 @@ class neuron_layer:
             activation_derivative = (self.sig*(1-self.sig))
         elif self.fnc == "relu":
             activation_derivative = drelu(self.sig)
-
 
 
         dJ_da = dJ_da * (activation_derivative).T
@@ -158,13 +164,14 @@ class neuron_layer:
         return dJ_da
     
 class output_layer(neuron_layer):
-    def __init__(self,input_size,output_num,coss_fnc="mse",learning_rate=0.0005):
+    def __init__(self,input_size,output_num,updt_method="err",coss_fnc="mse",learning_rate=0.0005):
         neuron_layer.__init__(self,input_size,output_num,learning_rate)
         self.coss_fnc = coss_fnc
         ## Store error
         self.j = np.zeros([self.layer_width,1])
         self.total_error = 0
         self.error = np.zeros([self.layer_width,1])
+        self.updt_method = updt_method
 
     def non_linear(self,*args):
         # Output layer does not have activatison function in this case
@@ -176,27 +183,31 @@ class output_layer(neuron_layer):
     
     def forward(self, x):
         a =super().forward(x)
-        print("Output x \t {}".format(a))
-
         return a
     
-    def backprop(self,*args):
+    def backprop(self,*args,**kwargs):
 
         ## J = (r-y)**2
         ## dJ/dy = -2*J
-        dJ_da = -2*self.j
         
-        
+        if self.updt_method == "err":
+            dJ_da = -2*self.j
+        elif self.updt_method == "ref" :
+            for args in kwargs:
+                if args == "dJ_da_val":
+                    dJ_da = kwargs[args]
+        else:
+            assert False # Update method should be either err or ref
+
+
         self.b = self.b - self.lr*dJ_da
         dJ_da = dJ_da.T
         
         dJ_dw = dJ_da.T @ self.x.T
-
         da_dc = self.w
         
         dJ_dc = dJ_da @ da_dc
         dJ_da = dJ_dc
-
 
         self.w = self.w - self.lr*dJ_dw 
 
