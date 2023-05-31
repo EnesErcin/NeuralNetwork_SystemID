@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import logging
 
 def plot_ss_signals(is_linear,wNN,time_array,store_in_u,stor_out,store_ref,stor_err,k_coefs):
     fig_2, (ax0, ax1)= plt.subplots(2, 1, figsize=(8, 10))
@@ -30,7 +31,7 @@ def plot_ss_signals(is_linear,wNN,time_array,store_in_u,stor_out,store_ref,stor_
     else:
         image_str = 'Sim_{}_output.png'.format("non_linear")
 
-
+    _log(directory_path,stor_err)
 
     # Save the plot in the specified directory
     plt.savefig(directory_path + image_str)
@@ -52,23 +53,21 @@ def plot_ss_signals(is_linear,wNN,time_array,store_in_u,stor_out,store_ref,stor_
     ax1.set_title('Error')
     ax1.legend()
 
-    # Set the desired directory path
-
-    if wNN:
-        directory_path = 'Sim_pics/wNN/'
-    else:
-        directory_path = 'Sim_pics/woNN/'
-    
-    if is_linear :
-        image_str = 'K_coefs_{}_output.png'.format("linear")
-    else:
-        image_str = 'K_coefs_{}_output.png'.format("non_linear")
-
 
     # Save the plot in the specified directory
     plt.savefig(directory_path + image_str)
 
     plt.show()
+
+
+def _log(log_file,stor_err):
+
+    # Configure the logging
+    logging.basicConfig(filename=log_file, level=logging.INFO)
+
+    # Log the average error 
+    logging.info(f'Abs Average error: {np.average(np.abs(stor_err))}')
+
 
 
 def _fifo(arr,new_val):
