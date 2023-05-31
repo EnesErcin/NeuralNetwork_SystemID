@@ -1,5 +1,5 @@
 # NeuralNetwork_SystemID
-Applications of neural networks on system identification special cases for control end electrical engineering.
+PID Tunining with neural network inspired by the [resarch paper](https://ieeexplore.ieee.org/document/714292).
 
 
 ## Introduction
